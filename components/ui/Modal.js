@@ -9,8 +9,8 @@ export default function Modal({ isOpen, onClose, children }) {
    <div
       className="fixed inset-0 flex justify-center items-center z-50"
       style={{
-        backgroundColor: 'rgba(0, 0, 0, 0.4)', // semi-transparent overlay for both themes
-        backdropFilter: 'blur(2px)', // optional: makes the modal pop a bit more
+        backgroundColor: 'rgba(0, 0, 0, 0.4)', 
+        backdropFilter: 'blur(2px)', 
       }}
     >
       <div

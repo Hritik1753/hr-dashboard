@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import EmployeeCard from '../components/EmployeeCard';
 import useBookmarks from '../hooks/useBookmarks';
-import SearchFilter from '../components/SearchFilter';
+import SearchFilter from '../components/Searchfilter';
 import toast from 'react-hot-toast';
 import ThemeToggle from '@/components/ThemeToggle';
 import Modal from '@/components/ui/Modal';

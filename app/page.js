@@ -1,103 +1,176 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useEffect, useState } from 'react';
+import EmployeeCard from '../components/EmployeeCard';
+import useBookmarks from '../hooks/useBookmarks';
+import SearchFilter from '../components/SearchFilter';
+import toast from 'react-hot-toast';
+import ThemeToggle from '@/components/ThemeToggle';
+import Modal from '@/components/ui/Modal';
+
+export default function HomePage() {
+  const [employees, setEmployees] = useState([]);
+  const [filteredEmployees, setFilteredEmployees] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [page, setPage] = useState(1);
+  const limit = 6;
+
+  const departments = ['HR', 'Engineering', 'Marketing', 'Sales', 'Design'];
+  const addToBookmarks = useBookmarks((state) => state.addBookmark);
+  const bookmarks = useBookmarks((state) => state.bookmarks);
+
+  // 🔍 Search & Filter Logic
+  const filterEmployees = ({ query, ratingFilter, departmentFilter }) => {
+    let result = [...employees];
+    if (query) {
+      result = result.filter((emp) =>
+        `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(query.toLowerCase()) ||
+        emp.email.toLowerCase().includes(query.toLowerCase())
+      );
+    }
+    if (departmentFilter) {
+      result = result.filter((emp) => emp.department === departmentFilter);
+    }
+    if (ratingFilter) {
+      result = result.filter((emp) => emp.performance == ratingFilter);
+    }
+    setFilteredEmployees(result);
+  };
+
+  // 🌐 Fetch Employees (Paginated)
+  useEffect(() => {
+    async function fetchUsers() {
+      const res = await fetch(`https://dummyjson.com/users?limit=${limit}&skip=${(page - 1) * limit}`);
+      const data = await res.json();
+      const enriched = data.users.map((user) => ({
+        ...user,
+        department: departments[Math.floor(Math.random() * departments.length)],
+        performance: Math.floor(Math.random() * 5) + 1,
+      }));
+      setEmployees(enriched);
+    }
+
+    fetchUsers();
+  }, [page]);
+
+  const handleBookmark = (employee) => {
+    addToBookmarks(employee);
+  };
+
+  const handlePromote = (employee) => {
+    toast.success(`${employee.firstName} has been promoted!`);
+  };
+
+  // 👤 Add New User (via Modal)
+  const handleCreateUser = (newUser) => {
+    setEmployees((prev) => [{ ...newUser, id: Date.now(), performance: 3 }, ...prev]);
+    setFilteredEmployees([]);
+    toast.success(`User ${newUser.firstName} created!`);
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <main className="min-h-screen bg-background text-foreground p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-3xl font-bold">📊 HR Dashboard</h1>
+        <div className="flex gap-2">
+          <ThemeToggle />
+          <button
+            onClick={() => setShowModal(true)}
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            ➕ Create User
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+      </div>
+
+      <SearchFilter onSearch={filterEmployees} />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+        {(filteredEmployees.length ? filteredEmployees : employees).map((emp) => (
+          <EmployeeCard
+            key={emp.id}
+            employee={emp}
+            bookmarked={!!bookmarks.find((b) => b.id === emp.id)}
+            onPromote={handlePromote}
+            onBookmark={handleBookmark}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+        ))}
+      </div>
+
+      {/* 📄 Pagination Controls */}
+      <div className="mt-6 flex justify-center gap-4">
+        <button
+          disabled={page === 1}
+          onClick={() => setPage((p) => p - 1)}
+          className="px-3 py-1 bg-gray-300 text-black rounded disabled:opacity-50"
         >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+          ⬅️ Prev
+        </button>
+        <span className="text-sm mt-1">Page {page}</span>
+        <button
+          onClick={() => setPage((p) => p + 1)}
+          className="px-3 py-1 bg-gray-300 text-black rounded"
         >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          Next ➡️
+        </button>
+      </div>
+
+      {/* 🧾 Modal for Creating New User */}
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)}>
+        <CreateUserForm onCreate={handleCreateUser} onClose={() => setShowModal(false)} />
+      </Modal>
+    </main>
+  );
+}
+
+// 👉 CreateUserForm inside same file or import
+function CreateUserForm({ onCreate, onClose }) {
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    age: '',
+    department: 'Engineering',
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!form.firstName || !form.lastName || !form.email || !form.age || !form.phone) {
+      toast.error('Please fill all fields');
+      return;
+    }
+    onCreate(form);
+    onClose();
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h2 className="text-lg font-bold">🧍 Create New Employee</h2>
+      {['firstName', 'lastName', 'email', 'phone', 'age'].map((field) => (
+        <input
+          key={field}
+          type="text"
+          placeholder={field}
+          value={form[field]}
+          onChange={(e) => setForm({ ...form, [field]: e.target.value })}
+          className="w-full border p-2 rounded"
+        />
+      ))}
+      <select
+        value={form.department}
+        onChange={(e) => setForm({ ...form, department: e.target.value })}
+        className="w-full border p-2 rounded"
+      >
+        {['HR', 'Engineering', 'Marketing', 'Sales', 'Design'].map((dept) => (
+          <option key={dept} value={dept}>
+            {dept}
+          </option>
+        ))}
+      </select>
+      <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
+        Create
+      </button>
+    </form>
   );
 }
